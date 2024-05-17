@@ -18,6 +18,7 @@ const Blank = styled.div`
   padding: 40px;
   display: block;
   margin: 0 auto;
+  box-shadow: 5px 2px 5px 2px gray;
   @media screen and (max-width: 550px) {
     width: 320px;
     height: 850px; 
@@ -246,12 +247,12 @@ interface Card {
 
 const App: React.FC = () => {
   const [carts, setCarts] = useState<Card[]>([])
-  const [valutaVal, setValutaVal] = useState<any>('')
-  const [rubliVal, setRubliVal] = useState<any>('')
-  const [cartNumber, setCartNumber] = useState<any>('')
-  const [cartMm, setCartMm] = useState<any>('')
-  const [cartGg, setCartGg] = useState<any>('')
-  const [cvv, setCvv] = useState<any>('')
+  const [valutaVal, setValutaVal] = useState<string | number>('')
+  const [rubliVal, setRubliVal] = useState<string | number>('')
+  const [cartNumber, setCartNumber] = useState<string | number>('')
+  const [cartMm, setCartMm] = useState<string | number>('')
+  const [cartGg, setCartGg] = useState<string | number>('')
+  const [cvv, setCvv] = useState<string | number>('')
   const [saveCart, setSaveCart] = useState(true)
   const re = /^[0-9\b]+$/;
   const [messageApi, contextHolder] = message.useMessage();
@@ -261,7 +262,7 @@ const App: React.FC = () => {
   const [cartGgError, setCartGgError] = useState(false)
   const [cvvError, setCvvError] = useState(false)
 
-  const info = (type:string, message:string) => {
+  const info = (type: 'error' | 'success', message:string) => {
     messageApi.open({
       type: type,
       content: message,
@@ -286,7 +287,7 @@ const App: React.FC = () => {
   }
 
   useEffect(() => {
-    fetchCarts()
+    fetchCarts();
   }, [])
 
   const submitCart = async () => {
@@ -297,21 +298,28 @@ const App: React.FC = () => {
         gg: +cartGg,
         cvv: +cvv,
     }
-
-      if (rubliVal<1) setSumError(true);
+    
+      if (+rubliVal < 1) setSumError(true);
       if (String(cartNumber).length !== 16) setCartNumberError(true);
       if (String(cartMm).length !== 2 || (sendData.mm < 5 && sendData.gg <= 24)) setCartMmError(true);
       if (String(cartGg).length !== 2 || sendData.gg < 24) setCartGgError(true);
       if (String(cvv).length !== 3) setCvvError(true);
 
-    if ( cartNumberError || cartMmError || cartGgError || cvvError || sumError ) {
+    if ( 
+          +rubliVal < 1 
+        || (String(cartNumber).length !== 16)
+        || (String(cartMm).length !== 2 || (sendData.mm < 5 && sendData.gg <= 24))
+        || (String(cartGg).length !== 2 || sendData.gg < 24)
+        || (String(cvv).length !== 3) 
+        ) 
+      {
         info('error', 'Проверьте правильность ввода данных');
         return;
-    }   
+    }  
 
     if (saveCart) {
       try {
-        const send = await axios.post('https://lavarel/api/cards', sendData)
+        await axios.post('https://lavarel/api/cards', sendData)
         .then(response => {
               if (response.status !== 201) info('error', 'Не удалось сохранить карту');
           info('success', 'Карта сохранена');
@@ -329,15 +337,16 @@ const App: React.FC = () => {
         info('error', 'Не удалось сохранить карту');
       }
     }
-    
+
+    if (rubliVal) {
     try {
       // - pay function
       info('success', 'Платеж выполнен');
     } catch (error) {
       info('error', 'Платеж не выполнен');
     }
- 
   }
+}
 
   return (
     <>
@@ -392,7 +401,7 @@ const App: React.FC = () => {
                 errorClear();
               }}>
                 <Icon src={plus} style={{height: 28, marginTop: 23}}/>
-                <p>Новая крата</p>
+                <p>Новая кaрта</p>
           </NewCart>
 
       </LittleCartContainer>
@@ -466,7 +475,7 @@ const App: React.FC = () => {
         <SaveContainer>
         <Check type='checkbox' checked={saveCart} onChange={()=>setSaveCart(!saveCart)}/>
         <div>
-        <p>Запомнить эту карту. Это безопасно<img src={attent}/></p>
+        <p>Запомнить эту карту. Это безопасно.<img src={attent}/></p>
         <p>Сохраняя карту, вы соглашаетесь с <Link>условиями привязки карты.</Link></p>
         </div>
         </SaveContainer>
