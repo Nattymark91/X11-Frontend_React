@@ -1,5 +1,4 @@
-import React from 'react';
-import { useState } from 'react'
+import React, { useEffect, useState } from 'react';
 import styled from "styled-components";
 import attent from './assets/attent.svg';
 import plus from './assets/plus.svg';
@@ -239,9 +238,14 @@ const ButtonSub = styled.button`
     width: 287px;
   }
 `
+interface Card {
+  num: string;
+  mm: string;
+  gg: string;
+}
 
 const App: React.FC = () => {
-  const [carts, setCarts] = useState({number: 1234567890123282, mm: 12, gg: 23})
+  const [carts, setCarts] = useState<Card[]>([])
   const [valutaVal, setValutaVal] = useState<any>('')
   const [rubliVal, setRubliVal] = useState<any>('')
   const [cartNumber, setCartNumber] = useState<any>('')
@@ -272,45 +276,67 @@ const App: React.FC = () => {
     setCvvError(false);
   }
 
+  const fetchCarts = async () => {
+        try {
+            const response = await axios.get('https://lavarel/api/cards')
+            setCarts (response.data);
+        } catch (error) {
+            setCarts ([]);
+        }
+  }
+
+  useEffect(() => {
+    fetchCarts()
+  }, [])
+
   const submitCart = async () => {
     const sendData = {
         count: +rubliVal,
-        number: +cartNumber,
+        num: +cartNumber,
         mm: +cartMm,
         gg: +cartGg,
         cvv: +cvv,
-        save: saveCart
     }
 
-    if (rubliVal<1) setSumError(true);
-    if (String(sendData.number).length !== 16) setCartNumberError(true);
-    if (String(cartMm).length !== 2 || (sendData.mm < 5 && sendData.gg <= 24)) setCartMmError(true);
-    if (String(sendData.gg).length !== 2 || sendData.gg < 24) setCartGgError(true);
-    if (String(sendData.cvv).length !== 3) setCvvError(true);
+      if (rubliVal<1) setSumError(true);
+      if (String(cartNumber).length !== 16) setCartNumberError(true);
+      if (String(cartMm).length !== 2 || (sendData.mm < 5 && sendData.gg <= 24)) setCartMmError(true);
+      if (String(cartGg).length !== 2 || sendData.gg < 24) setCartGgError(true);
+      if (String(cvv).length !== 3) setCvvError(true);
+
     if ( cartNumberError || cartMmError || cartGgError || cvvError || sumError ) {
         info('error', 'Проверьте правильность ввода данных');
         return;
-    }
+    }   
 
-    if (saveCart) setCarts(sendData); 
-
-    try {
-      const send = await axios.post('url', sendData)
-      .then(response => {
-            if (response.status !== 201) info('warning', response.data.message);
-        info('success', response.data.message);
-      })
-      .then(() => {
-        setRubliVal(''); 
-        setValutaVal('');
-        setCartNumber('');
-        setCartMm('');
-        setCartGg('');
-        setCvv('');
+    if (saveCart) {
+      try {
+        const send = await axios.post('https://lavarel/api/cards', sendData)
+        .then(response => {
+              if (response.status !== 201) info('error', 'Не удалось сохранить карту');
+          info('success', 'Карта сохранена');
         })
-    } catch (error) {
-      info('error', 'Ошибка платежа');
+        .then(() => {
+          setRubliVal(''); 
+          setValutaVal('');
+          setCartNumber('');
+          setCartMm('');
+          setCartGg('');
+          setCvv('');
+          })
+        .then(fetchCarts)
+      } catch (error) {
+        info('error', 'Не удалось сохранить карту');
+      }
     }
+    
+    try {
+      // - pay function
+      info('success', 'Платеж выполнен');
+    } catch (error) {
+      info('error', 'Платеж не выполнен');
+    }
+ 
   }
 
   return (
@@ -345,17 +371,18 @@ const App: React.FC = () => {
 
       <LittleCartContainer>
 
-  
+      
+      {carts.map((cart) => (
           <LittleCart onClick={() => {
-                setCartNumber(carts.number);
-                setCartMm(carts.mm);
-                setCartGg(carts.gg);
+                setCartNumber(cart.num);
+                setCartMm(cart.mm);
+                setCartGg(cart.gg);
                 errorClear();
               }}>
-              <p>{carts.mm} / {carts.gg}</p>
-              <p>&#8226; &#8226; &#8226; &#8226;  {carts.number.toString().slice(12)}</p>
+              <p>{cart.mm} / {cart.gg}</p>
+              <p>&#8226; &#8226; &#8226; &#8226;  {cart.num.toString().slice(12)}</p>
           </LittleCart>
-
+        ))}
 
           <NewCart onClick={() => {
                 setCartNumber('');
